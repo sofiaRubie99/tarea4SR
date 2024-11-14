@@ -1,6 +1,7 @@
 "use strict";
 const amqp = require('amqplib'); // Asegúrate de que esta línea esté presente
 const headers = require('./headersCORS');  // Si usas un archivo para CORS, asegúrate de que esté bien configurado
+const rabbitPromise = require('./rabbitMQ');
 
 exports.handler = async function(event, context) {
   try {
