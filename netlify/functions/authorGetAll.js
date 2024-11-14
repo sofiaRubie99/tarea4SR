@@ -19,27 +19,18 @@ exports.handler = async function(event, context) {
     let messages = [];
     channel.consume(queue, (msg) => {
       if (msg) {
-        try {
-          // Parsear el contenido del mensaje desde una cadena de texto a un objeto JSON
-          const messageContent = msg.content.toString();
-          const parsedMessage = JSON.parse(messageContent); // Convertir el texto a un objeto JavaScript
-          
-          // Almacenar solo el contenido del 'body' del mensaje
-          messages.push(parsedMessage.body);  
-        } catch (error) {
-          console.error('Error al parsear el mensaje:', error);
-        }
+        messages.push(msg.content.toString());  // Almacena el mensaje en el arreglo
         channel.ack(msg);  // Acknowledge el mensaje
       }
     });
 
-    // Asegúrate de que todos los mensajes se procesen antes de devolver la respuesta
+    // Asegúrate de que todos los mensajes se procesen
     await new Promise(resolve => setTimeout(resolve, 5000));  // Espera un poco para que los mensajes sean procesados
 
-    // Devolver la respuesta HTTP solo con los bodies de los mensajes
+    // Devolver la respuesta HTTP
     return {
       statusCode: 200,
-      body: JSON.stringify({ messages }),  // Solo incluye los bodies de los mensajes
+      body: JSON.stringify({ messages }),
       headers: headers,  // Incluye los headers CORS si es necesario
     };
   } catch (error) {
