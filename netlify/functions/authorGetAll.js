@@ -3,41 +3,33 @@
 const headers = require('./headersCORS');
 const rabbitPromise = require('./rabbitMQ');
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers, body: "OK" };
-  }
-
+async function getAllMessages() {
   try {
-    const channel = await rabbitPromise();
-    const request = `{'method':'GET_ALL'}`;
-    
-    // Set up a temporary queue to receive the response
-    const responseQueue = await channel.assertQueue('', { exclusive: true });
-    
-    // Send the request message to the "bookstore" queue
-    await channel.sendToQueue("bookstore", Buffer.from(request), {
-      replyTo: responseQueue.queue,
+    // Conectar al servidor RabbitMQ
+    const connection = await amqp.connect('amqp://localhost'); // Cambia la URL si es necesario
+    const channel = await connection.createChannel();
+
+    // Nombre de la cola
+    const queue = 'myQueue';
+
+    // Asegúrate de que la cola exista
+    await channel.assertQueue(queue, { durable: true });
+
+    // Consumiendo mensajes
+    console.log('Esperando mensajes en la cola:', queue);
+    channel.consume(queue, (msg) => {
+      if (msg) {
+        // Procesar mensaje
+        console.log('Mensaje recibido:', msg.content.toString());
+        // Acknowledge el mensaje
+        channel.ack(msg);
+      }
     });
 
-    // Wait for the response from RabbitMQ
-    const authors = await new Promise((resolve, reject) => {
-      channel.consume(
-        responseQueue.queue,
-        (msg) => {
-          if (msg !== null) {
-            const data = JSON.parse(msg.content.toString());
-            resolve(data);
-            channel.ack(msg);
-          }
-        },
-        { noAck: false }
-      );
-    });
-
-    return { statusCode: 200, headers, body: JSON.stringify(authors) };
+    // Deja que el proceso continúe para recibir mensajes
   } catch (error) {
-    console.log(error);
-    return { statusCode: 422, headers, body: JSON.stringify(error) };
+    console.error('Error:', error);
   }
-};
+}
+
+getAllMessages();
